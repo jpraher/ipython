@@ -155,5 +155,5 @@ def launch_kernel(*args, **kwargs):
     where kernel_process is a Popen object and the ports are integers.
     """
     print("ipkernel launch_kernel: args %s, kwargs %s" % (args, kwargs))
-    return bin_launch_kernel('/Users/jakob/src/projects/ipython-xlang-kernel/src/kernel',
+    return bin_launch_kernel('../ipython-xlang-kernel/src/kernel',
                              *args, **kwargs)

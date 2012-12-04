@@ -118,7 +118,7 @@ class ZMQSocketChannel(Thread):
             address = "tcp://%s:%i" % address
         self._address = address
         atexit.register(self._notice_exit)
-    
+
     def _notice_exit(self):
         self._exiting = True
 
@@ -157,11 +157,11 @@ class ZMQSocketChannel(Thread):
 
     def _queue_send(self, msg):
         """Queue a message to be sent from the IOLoop's thread.
-        
+
         Parameters
         ----------
         msg : message to send
-        
+
         This is threadsafe, as it uses IOLoop.add_callback to give the loop's
         thread control of the action.
         """
@@ -171,12 +171,12 @@ class ZMQSocketChannel(Thread):
 
     def _handle_recv(self, msg):
         """callback for stream.on_recv
-        
+
         unpacks message, and calls handlers with it.
         """
         ident,smsg = self.session.feed_identities(msg)
         self.call_handlers(self.session.unserialize(smsg))
-    
+
 
 
 class ShellSocketChannel(ZMQSocketChannel):
@@ -248,7 +248,7 @@ class ShellSocketChannel(ZMQSocketChannel):
         allow_stdin : bool, optional (default self.allow_stdin)
             Flag for whether the kernel can send stdin requests to frontends.
 
-            Some frontends (e.g. the Notebook) do not support stdin requests. 
+            Some frontends (e.g. the Notebook) do not support stdin requests.
             If raw_input is called from code executed from such a frontend, a
             StdinNotImplementedError will be raised.
 
@@ -262,8 +262,8 @@ class ShellSocketChannel(ZMQSocketChannel):
             user_expressions = {}
         if allow_stdin is None:
             allow_stdin = self.allow_stdin
-        
-        
+
+
         # Don't waste network traffic if inputs are invalid
         if not isinstance(code, basestring):
             raise ValueError('code %r must be a string' % code)
@@ -469,7 +469,7 @@ class StdInSocketChannel(ZMQSocketChannel):
             self.socket.close()
         except:
             pass
-        
+
 
     def stop(self):
         self.ioloop.stop()
@@ -521,17 +521,17 @@ class HBSocketChannel(ZMQSocketChannel):
         self.socket = self.context.socket(zmq.REQ)
         self.socket.setsockopt(zmq.LINGER, 0)
         self.socket.connect(self.address)
-        
+
         self.poller.register(self.socket, zmq.POLLIN)
-    
+
     def _poll(self, start_time):
         """poll for heartbeat replies until we reach self.time_to_dead
-        
+
         Ignores interrupts, and returns the result of poll(), which
         will be an empty list if no messages arrived before the timeout,
         or the event tuple if there is a message to receive.
         """
-        
+
         until_dead = self.time_to_dead - (time.time() - start_time)
         # ensure poll at least once
         until_dead = max(until_dead, 1e-3)
@@ -562,13 +562,13 @@ class HBSocketChannel(ZMQSocketChannel):
         self._create_socket()
         self._running = True
         self._beating = True
-        
+
         while self._running:
             if self._pause:
                 # just sleep, and skip the rest of the loop
                 time.sleep(self.time_to_dead)
                 continue
-            
+
             since_last_heartbeat = 0.0
             # io.rprint('Ping from HB channel') # dbg
             # no need to catch EFSM here, because the previous event was
@@ -659,10 +659,10 @@ class KernelManager(HasTraits):
 
     # The addresses for the communication channels.
     connection_file = Unicode('')
-    
+
     transport = CaselessStrEnum(['tcp', 'ipc'], default_value='tcp')
-    
-    
+
+
     ip = Unicode(LOCALHOST)
     def _ip_changed(self, name, old, new):
         if new == '*':
@@ -690,10 +690,10 @@ class KernelManager(HasTraits):
         super(KernelManager, self).__init__(**kwargs)
         if self.session is None:
             self.session = Session(config=self.config)
-    
+
     def __del__(self):
         self.cleanup_connection_file()
-    
+
 
     #--------------------------------------------------------------------------
     # Channel management methods:
@@ -740,10 +740,10 @@ class KernelManager(HasTraits):
     #--------------------------------------------------------------------------
     # Kernel process management methods:
     #--------------------------------------------------------------------------
-    
+
     def cleanup_connection_file(self):
         """cleanup connection file *if we wrote it*
-        
+
         Will not raise if the connection file was already removed somehow.
         """
         if self._connection_file_written:
@@ -753,9 +753,9 @@ class KernelManager(HasTraits):
                 os.remove(self.connection_file)
             except (IOError, OSError):
                 pass
-            
+
             self._cleanup_ipc_files()
-    
+
     def _cleanup_ipc_files(self):
         """cleanup ipc files if we wrote them"""
         if self.transport != 'ipc':
@@ -766,12 +766,12 @@ class KernelManager(HasTraits):
                 os.remove(ipcfile)
             except (IOError, OSError):
                 pass
-    
+
     def load_connection_file(self):
         """load connection info from JSON dict in self.connection_file"""
         with open(self.connection_file) as f:
             cfg = json.loads(f.read())
-        
+
         from pprint import pprint
         pprint(cfg)
         self.transport = cfg.get('transport', 'tcp')
@@ -781,7 +781,7 @@ class KernelManager(HasTraits):
         self.iopub_port = cfg['iopub_port']
         self.hb_port = cfg['hb_port']
         self.session.key = str_to_bytes(cfg['key'])
-    
+
     def write_connection_file(self):
         """write connection info to JSON dict in self.connection_file"""
         if self._connection_file_written:
@@ -795,9 +795,9 @@ class KernelManager(HasTraits):
         self.stdin_port = cfg['stdin_port']
         self.iopub_port = cfg['iopub_port']
         self.hb_port = cfg['hb_port']
-        
+
         self._connection_file_written = True
-    
+
     def start_kernel(self, **kw):
         """Starts a kernel process and configures the manager to use it.
 
@@ -820,18 +820,19 @@ class KernelManager(HasTraits):
                                "configured properly. "
                                "Currently valid addresses are: %s"%LOCAL_IPS
                                )
-        
+
         # write connection file / get default ports
         self.write_connection_file()
 
         self._launch_args = kw.copy()
         launch_kernel = kw.pop('launcher', None)
         if launch_kernel is None:
-            from ipkernel import launch_kernel
+            # from ipkernel import launch_kernel
+            from ext_entry_point import launch_kernel
         self.kernel = launch_kernel(fname=self.connection_file, **kw)
 
     def shutdown_kernel(self, restart=False):
-        """ Attempts to the stop the kernel process cleanly. 
+        """ Attempts to the stop the kernel process cleanly.
 
         If the kernel cannot be stopped and the kernel is local, it is killed.
         """
