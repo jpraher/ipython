@@ -112,6 +112,8 @@ data-notebook-id={{notebook_id}}
                 <li id="run_all_cells_below"><a href="#">Run All Below</a></li>
                 <hr/>
                 <li id="to_code"><a href="#">Code</a></li>
+                <li id="to_lpprogram"><a href="#">LP Program</a></li>
+                <li id="to_lpquery"><a href="#">LP Query</a></li>
                 <li id="to_markdown"><a href="#">Markdown </a></li>
                 <li id="to_raw"><a href="#">Raw Text</a></li>
                 <li id="to_heading1"><a href="#">Heading 1</a></li>
@@ -205,8 +207,13 @@ data-notebook-id={{notebook_id}}
 <script src="{{ static_url("js/outputarea.js") }}" type="text/javascript" charset="utf-8"></script>
 <script src="{{ static_url("js/cell.js") }}" type="text/javascript" charset="utf-8"></script>
 <script src="{{ static_url("js/codecell.js") }}" type="text/javascript" charset="utf-8"></script>
+<script src="{{ static_url("js/lpprogramcell.js") }}" type="text/javascript" charset="utf-8"></script>
+<script src="{{ static_url("js/lpquerycell.js") }}" type="text/javascript" charset="utf-8"></script>
+<script src="{{ static_url("js/lpprogram.js") }}" type="text/javascript" charset="utf-8"></script>
+
 <script src="{{ static_url("js/completer.js") }}" type="text/javascript" charset="utf-8"></script>
 <script src="{{ static_url("js/textcell.js") }}" type="text/javascript" charset="utf-8"></script>
+
 <script src="{{ static_url("js/kernel.js") }}" type="text/javascript" charset="utf-8"></script>
 <script src="{{ static_url("js/savewidget.js") }}" type="text/javascript" charset="utf-8"></script>
 <script src="{{ static_url("js/quickhelp.js") }}" type="text/javascript" charset="utf-8"></script>

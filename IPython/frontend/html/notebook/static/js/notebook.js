@@ -21,6 +21,7 @@ var IPython = (function (IPython) {
         this.element.data("notebook", this);
         this.next_prompt_number = 1;
         this.kernel = null;
+        this.lpprogram = null;
         this.clipboard = null;
         this.undelete_backup = null;
         this.undelete_index = null;
@@ -87,15 +88,15 @@ var IPython = (function (IPython) {
         $(document).keydown(function (event) {
             // console.log(event);
             if (that.read_only) return true;
-            
-            // Save (CTRL+S) or (AppleKey+S) 
+
+            // Save (CTRL+S) or (AppleKey+S)
             //metaKey = applekey on mac
-            if ((event.ctrlKey || event.metaKey) && event.keyCode==83) { 
+            if ((event.ctrlKey || event.metaKey) && event.keyCode==83) {
                 that.save_notebook();
                 event.preventDefault();
                 return false;
             } else if (event.which === key.ESC) {
-                // Intercept escape at highest level to avoid closing 
+                // Intercept escape at highest level to avoid closing
                 // websocket connection with firefox
                 event.preventDefault();
             } else if (event.which === key.SHIFT) {
@@ -288,7 +289,7 @@ var IPython = (function (IPython) {
             var app_height = $('div#main_app').height(); // content height
             var splitter_height = $('div#pager_splitter').outerHeight(true);
             var pager_height = $('div#pager').outerHeight(true);
-            var new_height = app_height - pager_height - splitter_height; 
+            var new_height = app_height - pager_height - splitter_height;
             that.element.animate({height : new_height + 'px'}, time);
         }
 
@@ -317,7 +318,7 @@ var IPython = (function (IPython) {
         var time = time || 0;
         cell_number = Math.min(cells.length-1,cell_number);
         cell_number = Math.max(0             ,cell_number);
-        scroll_value = cells[cell_number].element.position().top-cells[0].element.position().top ; 
+        scroll_value = cells[cell_number].element.position().top-cells[0].element.position().top ;
         this.element.animate({scrollTop:scroll_value}, time);
         return scroll_value;
     };
@@ -583,6 +584,12 @@ var IPython = (function (IPython) {
             if (type === 'code') {
                 cell = new IPython.CodeCell(this.kernel);
                 cell.set_input_prompt();
+            } else if (type === 'lpprogram') {
+                cell = new IPython.LPProgramCell(this.lpprogram);
+                cell.set_input_prompt();
+            } else if (type === 'lpquery') {
+                cell = new IPython.LPQueryCell(this.kernel, this.lpprogram);
+                cell.set_input_prompt();
             } else if (type === 'markdown') {
                 cell = new IPython.MarkdownCell();
             } else if (type === 'html') {
@@ -619,6 +626,12 @@ var IPython = (function (IPython) {
         if (this.ncells() === 0 || this.is_valid_cell_index(index)) {
             if (type === 'code') {
                 cell = new IPython.CodeCell(this.kernel);
+                cell.set_input_prompt();
+            } else if (type === 'lpprogram') {
+                cell = new IPython.LPProgramCell(this.lpprogram);
+                cell.set_input_prompt();
+            } else if (type === 'lpquery') {
+                cell = new IPython.LPQueryCell(this.kernel, this.lpprogram);
                 cell.set_input_prompt();
             } else if (type === 'markdown') {
                 cell = new IPython.MarkdownCell();
@@ -666,7 +679,47 @@ var IPython = (function (IPython) {
         };
     };
 
+    Notebook.prototype.to_lpprogram = function (index) {
+        var i = this.index_or_selected(index);
+        if (this.is_valid_cell_index(i)) {
+            var source_element = this.get_cell_element(i);
+            var source_cell = source_element.data("cell");
+            if (!(source_cell instanceof IPython.LPProgramCell)) {
+                target_cell = this.insert_cell_below('lpprogram',i);
+                var text = source_cell.get_text();
+                if (text === source_cell.placeholder) {
+                    text = '';
+                }
+                target_cell.set_text(text);
+                // make this value the starting point, so that we can only undo
+                // to this state, instead of a blank cell
+                target_cell.code_mirror.clearHistory();
+                source_element.remove();
+                this.dirty = true;
+            };
+        };
+    };
 
+    Notebook.prototype.to_lpquery = function (index) {
+        var i = this.index_or_selected(index);
+        if (this.is_valid_cell_index(i)) {
+            var source_element = this.get_cell_element(i);
+            var source_cell = source_element.data("cell");
+            if (!(source_cell instanceof IPython.LPQueryCell)) {
+                target_cell = this.insert_cell_below('lpquery',i);
+                var text = source_cell.get_text();
+                if (text === source_cell.placeholder) {
+                    text = '';
+                }
+                target_cell.set_text(text);
+                // make this value the starting point, so that we can only undo
+                // to this state, instead of a blank cell
+                target_cell.code_mirror.clearHistory();
+                source_element.remove();
+                this.dirty = true;
+            };
+        };
+    };
     Notebook.prototype.to_markdown = function (index) {
         var i = this.index_or_selected(index);
         if (this.is_valid_cell_index(i)) {
@@ -1035,14 +1088,23 @@ var IPython = (function (IPython) {
     Notebook.prototype.start_kernel = function () {
         var base_url = $('body').data('baseKernelUrl') + "kernels";
         this.kernel = new IPython.Kernel(base_url);
+        this.lpprogram = new IPython.LPProgram(this, this.kernel);
         this.kernel.start(this.notebook_id);
         // Now that the kernel has been created, tell the CodeCells about it.
         var ncells = this.ncells();
         for (var i=0; i<ncells; i++) {
             var cell = this.get_cell(i);
+            if (cell instanceof IPython.LPProgramCell) {
+                cell.set_lpprogram(this.lpprogram);
+            }
+            if (cell instanceof IPython.LPQueryCell) {
+                cell.set_lpprogram(this.lpprogram);
+            }
+
             if (cell instanceof IPython.CodeCell) {
                 cell.set_kernel(this.kernel)
             };
+
         };
     };
 
@@ -1133,6 +1195,7 @@ var IPython = (function (IPython) {
 
     Notebook.prototype.set_notebook_name = function (name) {
         this.notebook_name = name;
+        this.lpprogram.update_module_name();
     };
 
 
@@ -1173,7 +1236,7 @@ var IPython = (function (IPython) {
                 if (cell_data.cell_type === 'plaintext'){
                     cell_data.cell_type = 'raw';
                 }
-                
+
                 new_cell = this.insert_cell_below(cell_data.cell_type);
                 new_cell.fromJSON(cell_data);
             };
@@ -1309,7 +1372,7 @@ var IPython = (function (IPython) {
             msg = "This notebook is version " + orig_vs + ", but we only fully support up to " +
             this_vs + ".  You can still work with this notebook, but some features " +
             "introduced in later notebook versions may not be available."
-            
+
             var dialog = $('<div/>');
             dialog.html(msg);
             this.element.append(dialog);
@@ -1326,7 +1389,7 @@ var IPython = (function (IPython) {
                 },
                 width: 400
             });
-            
+
         }
         // Create the kernel after the notebook is completely loaded to prevent
         // code execution upon loading, which is a security risk.
@@ -1361,11 +1424,10 @@ var IPython = (function (IPython) {
             });
         }
     }
-    
+
     IPython.Notebook = Notebook;
 
 
     return IPython;
 
 }(IPython));
-
