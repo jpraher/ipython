@@ -53,6 +53,10 @@ var IPython = (function (IPython) {
 
     LPQueryCell.prototype = new IPython.CodeCell();
 
+    LPQueryCell.prototype.set_lpprogram = function(lpprogram) {
+        this.lpprogram = lpprogram;
+    }
+
     /**
      * Execute current code cell to the kernel
      * @method execute

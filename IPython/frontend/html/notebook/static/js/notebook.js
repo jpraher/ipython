@@ -1100,7 +1100,6 @@ var IPython = (function (IPython) {
             if (cell instanceof IPython.LPQueryCell) {
                 cell.set_lpprogram(this.lpprogram);
             }
-
             if (cell instanceof IPython.CodeCell) {
                 cell.set_kernel(this.kernel)
             };
