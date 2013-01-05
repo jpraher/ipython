@@ -103,9 +103,7 @@ var IPython = (function (IPython) {
         }
         code += "end"
 
-        var sigandmod = "sig " + code + "\n" +
-                        "module " + code + "\n"
-        code = sigandmod;
+        code = "module " + code + "\n";
 
         console.log("executing\n" + code);
 
